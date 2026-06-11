@@ -1,0 +1,13 @@
+<section id="summary" class="bg-pcb-surface/50">
+  <div class="section-container">
+    <p class="section-title">{{ i18n "summary.title" }}</p>
+    <div class="prose prose-invert prose-lg max-w-3xl">
+      {{ .Content }}
+    </div>
+    <div class="mt-8 flex flex-wrap gap-3">
+      {{ range .Params.tags }}
+        <span class="tag">{{ . }}</span>
+      {{ end }}
+    </div>
+  </div>
+</section>

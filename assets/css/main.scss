@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-pcb-bg text-gray-200 antialiased;
+  }
+
+  ::selection {
+    @apply bg-neon/20 text-neon;
+  }
+}
+
+@layer components {
+  .section-container {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24;
+  }
+
+  .section-title {
+    @apply font-mono text-neon text-sm uppercase tracking-[0.2em] mb-4;
+  }
+
+  .section-heading {
+    @apply text-3xl sm:text-4xl font-bold text-white mb-8;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-6 py-3 bg-neon text-pcb-bg font-semibold rounded-lg
+           hover:bg-neon-glow transition-all duration-300 hover:shadow-[0_0_24px_rgba(0,255,136,0.3)];
+  }
+
+  .card {
+    @apply bg-pcb-surface border border-pcb-trace/50 rounded-xl p-6
+           hover:border-neon/30 transition-all duration-300;
+  }
+
+  .tag {
+    @apply inline-block px-3 py-1 text-xs font-mono text-neon bg-neon/10 rounded-full border border-neon/20;
+  }
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+  }
+
+  .border-glow {
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.1);
+  }
+
+  .filter-bw {
+    filter: grayscale(100%);
+  }
+}

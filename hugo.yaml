@@ -1,0 +1,33 @@
+baseURL: https://vincent.chalnot.fr/
+languageCode: en
+title: Vincent Chalnot
+
+disableKinds:
+  - taxonomy
+  - term
+
+params:
+  description: "Vincent Chalnot — Staff Engineer. Full-stack systems, AI-augmented development, open source author."
+
+defaultContentLanguage: en
+
+languages:
+  en:
+    languageName: English
+    weight: 1
+    title: Vincent Chalnot
+    contentDir: content/en
+  fr:
+    languageName: Français
+    weight: 2
+    title: Vincent Chalnot
+    contentDir: content/fr
+
+module:
+  mounts:
+    - source: assets
+      target: assets
+    - source: static
+      target: static
+    - source: node_modules/tailwindcss
+      target: assets/css/tailwindcss

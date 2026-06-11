@@ -1,0 +1,28 @@
+<section id="experience" class="bg-pcb-surface/50">
+  <div class="section-container">
+    <p class="section-title">{{ i18n "experience.title" }}</p>
+    <h2 class="section-heading">{{ .Params.heading }}</h2>
+    <div class="space-y-8">
+      {{ range .Params.roles }}
+      <div class="card group">
+        <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 mb-3">
+          <h3 class="text-xl font-bold text-white group-hover:text-neon transition-colors">{{ .title }}</h3>
+          <span class="font-mono text-sm text-neon whitespace-nowrap">{{ .period }}</span>
+        </div>
+        <p class="text-gray-400 font-medium mb-1">{{ .company }}</p>
+        <p class="text-gray-500 text-sm leading-relaxed mt-2">{{ .description }}</p>
+        {{ if .highlights }}
+        <ul class="mt-4 space-y-2">
+          {{ range .highlights }}
+          <li class="flex items-start gap-2 text-sm text-gray-400">
+            <svg class="w-4 h-4 text-neon mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            {{ . }}
+          </li>
+          {{ end }}
+        </ul>
+        {{ end }}
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</section>

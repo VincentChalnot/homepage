@@ -1,0 +1,25 @@
+<header class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-pcb-bg/80 border-b border-pcb-trace/30">
+  <nav class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#hero" class="font-mono text-neon text-lg font-bold hover:text-neon-glow transition-colors">
+      VC_
+    </a>
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#summary" class="text-sm text-gray-400 hover:text-neon transition-colors">{{ i18n "nav.experience" }}</a>
+      <a href="#expertise" class="text-sm text-gray-400 hover:text-neon transition-colors">{{ i18n "nav.expertise" }}</a>
+      <a href="#projects" class="text-sm text-gray-400 hover:text-neon transition-colors">{{ i18n "nav.projects" }}</a>
+      <a href="#contact" class="text-sm text-gray-400 hover:text-neon transition-colors">{{ i18n "nav.contact" }}</a>
+      {{ range .Translations }}
+      <a href="{{ .RelPermalink }}" class="ml-4 px-3 py-1 text-xs border border-pcb-trace/50 rounded-full text-gray-400 hover:text-neon hover:border-neon/50 transition-all">
+        {{ i18n "lang_switch" }}
+      </a>
+      {{ end }}
+    </div>
+    <div class="md:hidden flex items-center gap-4">
+      {{ range .Translations }}
+      <a href="{{ .RelPermalink }}" class="text-xs text-neon border border-neon/30 px-2 py-1 rounded">
+        {{ .Language.LanguageName }}
+      </a>
+      {{ end }}
+    </div>
+  </nav>
+</header>

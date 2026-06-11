@@ -1,0 +1,26 @@
+nav:
+  experience: "Expérience"
+  expertise: "Expertise"
+  projects: "Projets"
+  contact: "Contact"
+hero:
+  greeting: "Bonjour, je suis"
+  cta: "Me contacter"
+summary:
+  title: "À propos"
+expertise:
+  title: "Expertise"
+experience:
+  title: "Expérience"
+  present: "Aujourd'hui"
+projects:
+  title: "Projets"
+  view_project: "Voir le projet"
+contact:
+  title: "Contact"
+  email: "Email"
+  github: "GitHub"
+  location: "Localisation"
+footer:
+  built_with: "Fait avec Hugo & Tailwind CSS"
+lang_switch: "English"

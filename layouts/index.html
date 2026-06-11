@@ -1,0 +1,20 @@
+{{ define "main" }}
+  {{ with .Site.GetPage "/hero" }}
+    {{ partial "hero.html" . }}
+  {{ end }}
+  {{ with .Site.GetPage "/summary" }}
+    {{ partial "summary.html" . }}
+  {{ end }}
+  {{ with .Site.GetPage "/expertise" }}
+    {{ partial "expertise.html" . }}
+  {{ end }}
+  {{ with .Site.GetPage "/experience" }}
+    {{ partial "experience.html" . }}
+  {{ end }}
+  {{ with .Site.GetPage "/projects" }}
+    {{ partial "projects.html" . }}
+  {{ end }}
+  {{ with .Site.GetPage "/contact" }}
+    {{ partial "contact.html" . }}
+  {{ end }}
+{{ end }}

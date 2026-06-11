@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCB Procedural Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #111; color: #ccc; font-family: monospace; font-size: 12px; display: flex; height: 100vh; overflow: hidden; }
+  #sidebar { width: 280px; min-width: 280px; background: #1a1a1a; border-right: 1px solid #333; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  #canvas-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #0d0d0d; overflow: hidden; }
+  svg#main { display: block; }
+  .section { background: #222; border: 1px solid #333; border-radius: 4px; padding: 10px; }
+  .section h3 { color: #7faa88; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  label { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; color: #aaa; }
+  label span { display: flex; justify-content: space-between; }
+  label span em { color: #7faa88; font-style: normal; }
+  input[type=range] { width: 100%; accent-color: #3a7a45; }
+  input[type=number], input[type=color], select { width: 100%; background: #1a1a1a; border: 1px solid #444; color: #ccc; padding: 3px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+  input[type=color] { height: 28px; padding: 2px; cursor: pointer; }
+  .row { display: flex; gap: 8px; }
+  .row label { flex: 1; }
+  button { width: 100%; padding: 8px; background: #2a4a2e; border: 1px solid #3a7a45; color: #7faa88; font-family: monospace; font-size: 12px; cursor: pointer; border-radius: 3px; transition: background 0.15s; }
+  button:hover { background: #3a6a3e; }
+  #btn-regen { background: #1a3a2e; border-color: #2a6a45; }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div style="color:#7faa88;font-size:14px;font-weight:bold;padding:4px 0;">PCB Generator</div>
+
+  <div class="section">
+    <h3>Canvas</h3>
+    <div class="row">
+      <label><span>Width <em id="v-cw">1000</em></span><input type="number" id="p-cw" value="1000" min="200" max="3000"></label>
+      <label><span>Height <em id="v-ch">1000</em></span><input type="number" id="p-ch" value="1000" min="200" max="3000"></label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Colors</h3>
+    <div class="row">
+      <label><span>Background</span><input type="color" id="p-bg" value="#030c05"></label>
+      <label><span>Foreground</span><input type="color" id="p-fg" value="#233e2a"></label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Grid</h3>
+    <label><span>Type</span>
+      <select id="p-grid-type">
+        <option value="square" selected>Squares</option>
+        <option value="triangle">Triangles</option>
+        <option value="hex">Hexagons</option>
+      </select>
+    </label>
+    <label><span>Cell size (px) <em id="v-gs">70</em></span><input type="range" id="p-gs" min="20" max="120" value="70"></label>
+    <label><span>Line width (px) <em id="v-glw">1.0</em></span><input type="range" id="p-glw" min="0.2" max="4" step="0.1" value="1.0"></label>
+    <label><span>Intersection radius (px) <em id="v-gir">2.5</em></span><input type="range" id="p-gir" min="0.5" max="6" step="0.5" value="2.5"></label>
+  </div>
+
+  <div class="section">
+    <h3>Dots</h3>
+    <div class="row">
+      <label><span>Min size <em id="v-dmin">3</em></span><input type="range" id="p-dmin" min="1" max="20" value="3"></label>
+      <label><span>Max size <em id="v-dmax">26</em></span><input type="range" id="p-dmax" min="2" max="60" value="26"></label>
+    </div>
+    <label><span>Count <em id="v-dcount">80</em></span><input type="range" id="p-dcount" min="5" max="300" value="80"></label>
+    <label><span>Skew (0=linear, 1=all-small) <em id="v-dskew">0.70</em></span><input type="range" id="p-dskew" min="0" max="1" step="0.01" value="0.7"></label>
+    <label><span>Position bias (0=intersections, 1=anywhere) <em id="v-dpos">0.34</em></span><input type="range" id="p-dpos" min="0" max="1" step="0.01" value="0.34"></label>
+    <label><span>Min spacing (× cell size) <em id="v-dspacing">1.2</em></span><input type="range" id="p-dspacing" min="0" max="3" step="0.1" value="1.2"></label>
+  </div>
+
+  <div class="section">
+    <h3>Rings (selected dots)</h3>
+    <label><span>Density (0=none, 1=all) <em id="v-rdens">0.70</em></span><input type="range" id="p-rdens" min="0" max="1" step="0.01" value="0.7"></label>
+    <label><span>Size weight (0=any, 1=only-big) <em id="v-rsw">0.50</em></span><input type="range" id="p-rsw" min="0" max="1" step="0.01" value="0.5"></label>
+    <div class="row">
+      <label><span>Ring mult min <em id="v-rrmin">1.40</em></span><input type="range" id="p-rrmin" min="1.05" max="2" step="0.05" value="1.4"></label>
+      <label><span>Ring mult max <em id="v-rrmax">2.50</em></span><input type="range" id="p-rrmax" min="1.1" max="4" step="0.05" value="2.5"></label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Paths</h3>
+    <label><span>Count <em id="v-pcount">20</em></span><input type="range" id="p-pcount" min="0" max="60" value="20"></label>
+    <label><span>Line width (px) <em id="v-plw">2.0</em></span><input type="range" id="p-plw" min="0.3" max="8" step="0.1" value="2.0"></label>
+    <label><span>Corner radius (px) <em id="v-pcr">8</em></span><input type="range" id="p-pcr" min="0" max="40" step="1" value="8"></label>
+    <label><span>Max turns <em id="v-pmaxturns">4</em></span><input type="range" id="p-pmaxturns" min="1" max="12" value="4"></label>
+    <label><span>Complexity bias (0=simple, 1=max-turns) <em id="v-pcbias">0.2</em></span><input type="range" id="p-pcbias" min="0" max="1" step="0.01" value="0.2"></label>
+    <label><span>Min straight (× cell size) <em id="v-pminstr">0.80</em></span><input type="range" id="p-pminstr" min="0" max="2" step="0.05" value="0.8"></label>
+    <label><span>Crossing (0=forbidden, 1=unrestricted) <em id="v-pcross">0.05</em></span><input type="range" id="p-pcross" min="0" max="1" step="0.05" value="0.05"></label>
+  </div>
+
+  <button id="btn-regen">↺ Regenerate</button>
+  <button id="btn-export">↓ Export SVG</button>
+</div>
+
+<div id="canvas-container">
+  <svg id="main" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<script>
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+  return el;
+}
+
+// ─── PARAMS ────────────────────────────────────────────────────────────────
+/** @type {{
+ *   bg: string, fg: string, gridType: string, cw: number, ch: number,
+ *   gs: number, glw: number, gir: number,
+ *   dmin: number, dmax: number, dcount: number, dskew: number, dpos: number, dspacing: number,
+ *   rdens: number, rsw: number, rrmin: number, rrmax: number,
+ *   pcount: number, plw: number, pcr: number, pmaxturns: number, pcbias: number,
+ *   pminstr: number, pcross: number
+ * }} */
+const params = {};
+const bindings = [
+  ['p-gs','v-gs','gs'],['p-glw','v-glw','glw'],['p-gir','v-gir','gir'],
+  ['p-dmin','v-dmin','dmin'],['p-dmax','v-dmax','dmax'],['p-dcount','v-dcount','dcount'],
+  ['p-dskew','v-dskew','dskew'],['p-dpos','v-dpos','dpos'],['p-dspacing','v-dspacing','dspacing'],
+  ['p-rdens','v-rdens','rdens'],['p-rsw','v-rsw','rsw'],
+  ['p-rrmin','v-rrmin','rrmin'],['p-rrmax','v-rrmax','rrmax'],
+  ['p-pcount','v-pcount','pcount'],['p-plw','v-plw','plw'],['p-pcr','v-pcr','pcr'],
+  ['p-pmaxturns','v-pmaxturns','pmaxturns'],['p-pcbias','v-pcbias','pcbias'],
+  ['p-pminstr','v-pminstr','pminstr'],['p-pcross','v-pcross','pcross'],
+];
+
+function readParams() {
+  params.bg = document.getElementById('p-bg').value;
+  params.fg = document.getElementById('p-fg').value;
+  params.gridType = document.getElementById('p-grid-type').value;
+  params.cw = +document.getElementById('p-cw').value;
+  params.ch = +document.getElementById('p-ch').value;
+  for (const [id, vid, key] of bindings) {
+    const v = parseFloat(document.getElementById(id).value);
+    params[key] = v;
+    if (vid) document.getElementById(vid).textContent = v % 1 === 0 ? v : v.toFixed(2);
+  }
+}
+
+for (const [id, vid] of bindings) {
+  if (!vid) continue;
+  document.getElementById(id).addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    document.getElementById(vid).textContent = v % 1 === 0 ? v : v.toFixed(2);
+  });
+}
+
+// ─── GRID BUILDERS ─────────────────────────────────────────────────────────
+function buildSquareGrid(W, H, S) {
+  const ints = [], segs = [];
+  const cols = Math.ceil(W / S) + 1, rows = Math.ceil(H / S) + 1;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    ints.push({ x: c * S, y: r * S });
+    if (c < cols - 1) segs.push({ x1: c*S, y1: r*S, x2: (c+1)*S, y2: r*S });
+    if (r < rows - 1) segs.push({ x1: c*S, y1: r*S, x2: c*S, y2: (r+1)*S });
+  }
+  return { intersections: ints, segments: segs };
+}
+
+function buildTriangleGrid(W, H, S) {
+  const ints = [], segs = [];
+  const rows = Math.ceil(H / S) + 1, cols = Math.ceil(W / S) + 1;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    ints.push({ x: c * S, y: r * S });
+  }
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const x = c * S, y = r * S;
+    if (c < cols - 1) segs.push({ x1: x, y1: y, x2: x+S, y2: y });
+    if (r < rows - 1) segs.push({ x1: x, y1: y, x2: x, y2: y+S });
+    if (c < cols - 1 && r < rows - 1) {
+      if ((r + c) % 2 === 0) segs.push({ x1: x, y1: y, x2: x+S, y2: y+S });
+      else segs.push({ x1: x+S, y1: y, x2: x, y2: y+S });
+    }
+  }
+  return { intersections: ints, segments: segs };
+}
+
+function buildHexGrid(W, H, S) {
+  const ints = [], segs = [];
+  const colStep = S * 3 / 2;
+  const rowStep = S * Math.sqrt(3) / 2;
+  const cols = Math.ceil(W / colStep) + 2, rows = Math.ceil(H / rowStep) + 2;
+  const intMap = new Map();
+  const key = (x, y) => `${Math.round(x*10)}_${Math.round(y*10)}`;
+  function getOrAdd(x, y) {
+    const k = key(x, y);
+    if (!intMap.has(k)) { intMap.set(k, { x, y }); ints.push({ x, y }); }
+    return intMap.get(k);
+  }
+  for (let col = -1; col < cols; col++) {
+    for (let row = -1; row < rows; row++) {
+      const cx = col * colStep;
+      const cy = row * rowStep * 2 + (col % 2 === 0 ? 0 : rowStep);
+      const verts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 180 * (60 * i);
+        verts.push({ x: cx + S * Math.cos(a), y: cy + S * Math.sin(a) });
+      }
+      for (let i = 0; i < 6; i++) {
+        const a = getOrAdd(verts[i].x, verts[i].y);
+        const b = getOrAdd(verts[(i+1)%6].x, verts[(i+1)%6].y);
+        const kk = [key(a.x,a.y), key(b.x,b.y)].sort().join('|');
+        if (!intMap.has('seg_'+kk)) {
+          intMap.set('seg_'+kk, true);
+          segs.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y });
+        }
+      }
+    }
+  }
+  return { intersections: ints, segments: segs };
+}
+
+// ─── SKEWED SIZE ────────────────────────────────────────────────────────────
+function skewedSize(min, max, skew) {
+  const exp = 1 + skew * 8;
+  const t = 1 - Math.pow(Math.random(), 1 / exp);
+  return min + t * (max - min);
+}
+
+// ─── NEAREST INTERSECTION ───────────────────────────────────────────────────
+function nearestIntersection(x, y, intersections) {
+  let best = null, bestD = Infinity;
+  for (const pt of intersections) {
+    const d = (pt.x - x) ** 2 + (pt.y - y) ** 2;
+    if (d < bestD) { bestD = d; best = pt; }
+  }
+  return best;
+}
+
+// ─── DOT PLACEMENT WITH SPACING ─────────────────────────────────────────────
+// Blacklist: track which intersections are "occupied" and block all segments
+// emanating from them. A segment is blocked if either endpoint is blacklisted.
+function placeDots(segments, intersections, P) {
+  const dots = [];
+  const blockedInts = new Set();
+  const minDist = P.dspacing * P.gs;
+  const minDistSq = minDist * minDist;
+  const intKey = pt => `${Math.round(pt.x)}_${Math.round(pt.y)}`;
+  const borderMargin = 2;
+  const isOnBorder = (x, y) => x < borderMargin || y < borderMargin || x > P.cw - borderMargin || y > P.ch - borderMargin;
+
+  // Filter segments: keep those that touch the canvas, and exclude segments
+  // whose both endpoints sit on the border (i.e. border lines themselves).
+  const validSegs = segments.filter(s => {
+    const ep1In = s.x1 >= 0 && s.y1 >= 0 && s.x1 <= P.cw && s.y1 <= P.ch;
+    const ep2In = s.x2 >= 0 && s.y2 >= 0 && s.x2 <= P.cw && s.y2 <= P.ch;
+    if (!ep1In && !ep2In) return false;
+    return !(isOnBorder(s.x1, s.y1) && isOnBorder(s.x2, s.y2));
+
+  });
+
+  const intKeyMap = new Map();
+  for (const pt of intersections) intKeyMap.set(intKey(pt), pt);
+
+  let attempts = 0;
+  const maxAttempts = P.dcount * 20;
+
+  while (dots.length < P.dcount && attempts < maxAttempts) {
+    attempts++;
+
+    let seg = null;
+    let tries = 0;
+    while (tries < 30) {
+      tries++;
+      const s = validSegs[Math.floor(Math.random() * validSegs.length)];
+      const k1 = intKey({ x: Math.round(s.x1), y: Math.round(s.y1) });
+      const k2 = intKey({ x: Math.round(s.x2), y: Math.round(s.y2) });
+      if (blockedInts.has(k1) && blockedInts.has(k2)) continue;
+      seg = s;
+      break;
+    }
+    if (!seg) continue;
+
+    let x, y;
+    if (Math.random() > P.dpos) {
+      // snap to endpoint — prefer the interior endpoint if one is on the border
+      const e1Border = isOnBorder(seg.x1, seg.y1);
+      const e2Border = isOnBorder(seg.x2, seg.y2);
+      if (e1Border && e2Border) continue;
+      if (e1Border) { x = seg.x2; y = seg.y2; }
+      else if (e2Border) { x = seg.x1; y = seg.y1; }
+      else if (Math.random() < 0.5) { x = seg.x1; y = seg.y1; }
+      else { x = seg.x2; y = seg.y2; }
+    } else {
+      let t = Math.random();
+      const pull = 1 - P.dpos;
+      if (Math.random() < pull) t = t < 0.5 ? t * t * 2 : 1 - (1-t)*(1-t)*2;
+      x = seg.x1 + t * (seg.x2 - seg.x1);
+      y = seg.y1 + t * (seg.y2 - seg.y1);
+    }
+
+    if (x < 0 || y < 0 || x > P.cw || y > P.ch) continue;
+    if (isOnBorder(x, y)) continue;
+
+    let tooClose = false;
+    for (const d of dots) {
+      if ((d.x - x) ** 2 + (d.y - y) ** 2 < minDistSq) { tooClose = true; break; }
+    }
+    if (tooClose) continue;
+
+    const size = skewedSize(P.dmin, P.dmax, P.dskew);
+    dots.push({ x, y, r: size / 2 });
+
+    const nearest = nearestIntersection(x, y, intersections);
+    if (nearest) blockedInts.add(intKey(nearest));
+  }
+
+  return dots;
+}
+
+// ─── SEGMENT INTERSECTION (for crossing check) ───────────────────────────────
+function segmentIntersection(s1, s2) {
+  const x1 = s1.x1, y1 = s1.y1, x2 = s1.x2, y2 = s1.y2;
+  const x3 = s2.x1, y3 = s2.y1, x4 = s2.x2, y4 = s2.y2;
+  const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(denom) < 1e-10) {
+    // Parallel: check collinear overlap
+    const cross = (x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2);
+    if (Math.abs(cross) > 1e-10) return null;
+    if (y1 === y2) {
+      const minA = Math.min(x1, x2), maxA = Math.max(x1, x2);
+      const minB = Math.min(x3, x4), maxB = Math.max(x3, x4);
+      if (minA >= maxB || minB >= maxA) return null;
+      return { x: Math.max(minA, minB), y: y1 };
+    }
+    if (x1 === x2) {
+      const minA = Math.min(y1, y2), maxA = Math.max(y1, y2);
+      const minB = Math.min(y3, y4), maxB = Math.max(y3, y4);
+      if (minA >= maxB || minB >= maxA) return null;
+      return { x: x1, y: Math.max(minA, minB) };
+    }
+    return null;
+  }
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+  const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+  return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
+}
+
+function pathCrossesExisting(newSegs, existingPaths, dotA, dotB) {
+  const tol = 0.5;
+  const isAtDot = (x, y) =>
+    (Math.abs(x - dotA.x) < tol && Math.abs(y - dotA.y) < tol) ||
+    (Math.abs(x - dotB.x) < tol && Math.abs(y - dotB.y) < tol);
+  for (const ns of newSegs) {
+    for (const path of existingPaths) {
+      for (const es of path.segments) {
+        const hit = segmentIntersection(ns, es);
+        if (!hit) continue;
+        const atNewEnd =
+          (Math.abs(hit.x - ns.x1) < tol && Math.abs(hit.y - ns.y1) < tol) ||
+          (Math.abs(hit.x - ns.x2) < tol && Math.abs(hit.y - ns.y2) < tol);
+        if (atNewEnd && isAtDot(hit.x, hit.y)) continue;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ─── ROUNDED ORTHOGONAL PATH ────────────────────────────────────────────────
+// Build an orthogonal path with N turns (monotonic, no backtracking).
+// Returns { d: svgPathString, segments: [{x1,y1,x2,y2}, ...] } with the
+// underlying straight segments (used for crossing checks).
+// `minStraight` (px) is the minimum allowed length for any straight segment.
+function buildOrthogonalPath(x1, y1, x2, y2, numTurns, cornerRadius, minStraight) {
+  if (numTurns < 1) numTurns = 1;
+
+  const dx = x2 - x1, dy = y2 - y1;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  const minS = Math.max(0, minStraight || 0);
+
+  let pts = [{ x: x1, y: y1 }];
+
+  if (numTurns === 1) {
+    if (Math.random() < 0.5) pts.push({ x: x2, y: y1 });
+    else pts.push({ x: x1, y: y2 });
+  } else {
+    // Decide starting axis from dominant displacement
+    const startH = adx >= ady ? (Math.random() < 0.7) : (Math.random() < 0.3);
+
+    // Desired move counts derived from numTurns
+    let hMoves = startH ? Math.ceil((numTurns + 1) / 2) : Math.floor((numTurns + 1) / 2);
+    let vMoves = (numTurns + 1) - hMoves;
+
+    // Clamp move counts so each move is at least minStraight long.
+    // If a count is too high, reduce it (the other count stays the same,
+    // which may shrink the alternation pattern — we fix that below).
+    if (minS > 0) {
+      const maxHMoves = Math.max(1, Math.floor(adx / minS));
+      const maxVMoves = Math.max(1, Math.floor(ady / minS));
+      if (hMoves > maxHMoves) hMoves = maxHMoves;
+      if (vMoves > maxVMoves) vMoves = maxVMoves;
+    }
+
+    // Make hMoves and vMoves differ by at most 1 (proper H/V alternation).
+    while (hMoves > vMoves + 1) vMoves++;
+    while (vMoves > hMoves + 1) hMoves++;
+
+    // Recompute effective startH so the longer axis leads (or pick from displacement).
+    let effStartH;
+    if (hMoves > vMoves) effStartH = true;
+    else if (vMoves > hMoves) effStartH = false;
+    else effStartH = adx >= ady ? Math.random() < 0.7 : Math.random() < 0.3;
+
+    // Generate splits with a minimum per-part length.
+    function splitMonotonic(total, n) {
+      if (n === 1) return [total];
+      const minFrac = minS > 0 ? Math.min(0.49, minS / Math.max(Math.abs(total), 1e-6)) : 0;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const r = [];
+        for (let i = 0; i < n - 1; i++) r.push(Math.random());
+        r.sort((a, b) => a - b);
+        const out = [];
+        let prev = 0, ok = true;
+        for (const p of r) {
+          const part = p - prev;
+          if (part < minFrac) { ok = false; break; }
+          out.push(part * total);
+          prev = p;
+        }
+        if (!ok) continue;
+        const last = 1 - prev;
+        if (last < minFrac) continue;
+        out.push(last * total);
+        return out;
+      }
+      // Fallback: equal parts
+      const part = total / n;
+      return Array(n).fill(part);
+    }
+
+    const hDeltas = splitMonotonic(dx, hMoves);
+    const vDeltas = splitMonotonic(dy, vMoves);
+
+    // The number of turns we can actually realize is hMoves + vMoves - 1.
+    // If the displacement was too small to support the requested numTurns
+    // (e.g. minStraight clamping reduced hMoves/vMoves), we just use fewer
+    // turns. Iterating `numTurns` times here would read undefined deltas and
+    // produce NaN coordinates, so we bound the loop to the realized turn count.
+    const effectiveTurns = hMoves + vMoves - 1;
+
+    let cx = x1, cy = y1;
+    let hi = 0, vi = 0;
+    let horizontal = effStartH;
+
+    for (let turn = 0; turn < effectiveTurns; turn++) {
+      if (horizontal) {
+        cx += hDeltas[hi++];
+        pts.push({ x: cx, y: cy });
+      } else {
+        cy += vDeltas[vi++];
+        pts.push({ x: cx, y: cy });
+      }
+      horizontal = !horizontal;
+    }
+    pts.push({ x: x2, y: y2 });
+  }
+
+  pts = pts.filter((p, i) => i === 0 || p.x !== pts[i-1].x || p.y !== pts[i-1].y);
+
+  // Defensive: reject any attempt that produced non-finite waypoints.
+  if (pts.some(p => !isFinite(p.x) || !isFinite(p.y))) return null;
+
+  // Collect straight segments for the crossing check.
+  const segs = [];
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i].x !== pts[i-1].x || pts[i].y !== pts[i-1].y) {
+      segs.push({ x1: pts[i-1].x, y1: pts[i-1].y, x2: pts[i].x, y2: pts[i].y });
+    }
+  }
+
+  if (cornerRadius <= 0 || pts.length < 3) {
+    let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`;
+    return { d, segments: segs };
+  }
+
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const prev = pts[i - 1], cur = pts[i], next = pts[i + 1];
+    const d1 = Math.sqrt((cur.x - prev.x) ** 2 + (cur.y - prev.y) ** 2);
+    const d2 = Math.sqrt((next.x - cur.x) ** 2 + (next.y - cur.y) ** 2);
+    const r = Math.min(cornerRadius, d1 / 2, d2 / 2);
+
+    const bx = cur.x - r * (cur.x - prev.x) / d1;
+    const by = cur.y - r * (cur.y - prev.y) / d1;
+    const ax = cur.x + r * (next.x - cur.x) / d2;
+    const ay = cur.y + r * (next.y - cur.y) / d2;
+
+    d += ` L ${bx.toFixed(2)} ${by.toFixed(2)} Q ${cur.x.toFixed(2)} ${cur.y.toFixed(2)} ${ax.toFixed(2)} ${ay.toFixed(2)}`;
+  }
+  d += ` L ${pts[pts.length-1].x.toFixed(1)} ${pts[pts.length-1].y.toFixed(1)}`;
+  return { d, segments: segs };
+}
+
+// ─── GRID-DIRECTION PATH (triangle / hex) ────────────────────────────────────
+// Build a polyline whose segments are drawn from the grid's own direction set
+// (so paths visually follow the grid lines). The path is "monotonic" in the
+// sense that every segment makes non-negative progress toward the destination.
+// Returns { d, segments } in the same shape as buildOrthogonalPath.
+function getGridDirections(gridType) {
+  if (gridType === 'triangle') return [[1, 0], [0, 1], [1, 1], [-1, 1]];
+  if (gridType === 'hex') {
+    const s = Math.sqrt(3) / 2;
+    return [[1, 0], [0.5, s], [-0.5, s]];
+  }
+  return null;
+}
+
+function buildGridPath(x1, y1, x2, y2, numTurns, directions, cornerRadius, minStraight) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  if (adx + ady < 1e-6) return { d: `M ${x1} ${y1}`, segments: [] };
+  const minS = Math.max(0, minStraight || 0);
+
+  // Filter to directions that make non-negative forward progress toward B.
+  const forwardDirs = directions.filter(d => d[0] * dx + d[1] * dy >= -1e-9);
+  if (forwardDirs.length < 2) {
+    // Only one forward direction exists: we can only draw a single segment in
+    // that direction. It will land at B only by coincidence, so we skip this
+    // pair rather than emit a non-grid-aligned straight line.
+    return null;
+  }
+
+  // Try up to N times to find a feasible path.
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const N = numTurns + 1;
+
+    // Pick a basis pair (d_a, d_b) that spans the plane.
+    let basis = null;
+    const dirList = forwardDirs.slice();
+    for (let i = 0; i < dirList.length && !basis; i++) {
+      for (let j = 0; j < dirList.length; j++) {
+        if (i === j) continue;
+        const det = dirList[i][0] * dirList[j][1] - dirList[i][1] * dirList[j][0];
+        if (Math.abs(det) > 1e-6) { basis = [dirList[i], dirList[j]]; break; }
+      }
+    }
+    if (!basis) return null;
+
+    // Build the first N-2 segments with random forward directions & lengths.
+    const dirs = [];
+    const lens = [];
+    let cumDx = 0, cumDy = 0;
+    let ok = true;
+    const maxFirstLen = (adx + ady) * 0.6;
+    for (let i = 0; i < N - 2; i++) {
+      const choices = forwardDirs.filter(d => i === 0 || !(d[0] === dirs[i-1][0] && d[1] === dirs[i-1][1]));
+      if (choices.length === 0) { ok = false; break; }
+      const d = choices[Math.floor(Math.random() * choices.length)];
+      const len = minS + Math.random() * Math.max(0, maxFirstLen - minS);
+      dirs.push(d);
+      lens.push(len);
+      cumDx += len * d[0];
+      cumDy += len * d[1];
+    }
+    if (!ok) continue;
+
+    // Remaining displacement to reach B.
+    const remDx = dx - cumDx, remDy = dy - cumDy;
+
+    // Solve: l_a * basis[0] + l_b * basis[1] = (remDx, remDy)
+    const [ba, bb] = basis;
+    const det = ba[0] * bb[1] - ba[1] * bb[0];
+    const la = (remDx * bb[1] - remDy * bb[0]) / det;
+    const lb = (remDy * ba[0] - remDx * ba[1]) / det;
+    if (!isFinite(la) || !isFinite(lb)) continue;
+    if (la < minS - 1e-6 || lb < minS - 1e-6) continue;
+
+    dirs.push(ba); lens.push(la);
+    dirs.push(bb); lens.push(lb);
+
+    // Build waypoints
+    const pts = [{ x: x1, y: y1 }];
+    let px = x1, py = y1;
+    for (let i = 0; i < dirs.length; i++) {
+      px += lens[i] * dirs[i][0];
+      py += lens[i] * dirs[i][1];
+      pts.push({ x: px, y: py });
+    }
+    pts[pts.length - 1] = { x: x2, y: y2 };
+
+    // Defensive: if any waypoint ended up non-finite, reject this attempt.
+    if (pts.some(p => !isFinite(p.x) || !isFinite(p.y))) continue;
+
+    const segs = [];
+    for (let i = 1; i < pts.length; i++) {
+      segs.push({ x1: pts[i-1].x, y1: pts[i-1].y, x2: pts[i].x, y2: pts[i].y });
+    }
+
+    // Build SVG path with rounded corners at non-collinear joints.
+    if (cornerRadius <= 0 || pts.length < 3) {
+      let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+      for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`;
+      return { d, segments: segs };
+    }
+
+    let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const prev = pts[i - 1], cur = pts[i], next = pts[i + 1];
+      const v1x = cur.x - prev.x, v1y = cur.y - prev.y;
+      const v2x = next.x - cur.x, v2y = next.y - cur.y;
+      const d1 = Math.sqrt(v1x * v1x + v1y * v1y);
+      const d2 = Math.sqrt(v2x * v2x + v2y * v2y);
+      if (d1 < 1e-6 || d2 < 1e-6) continue;
+      const cosA = (v1x * v2x + v1y * v2y) / (d1 * d2);
+      if (cosA < -0.999) {
+        d += ` L ${next.x.toFixed(1)} ${next.y.toFixed(1)}`;
+        continue;
+      }
+      const r = Math.min(cornerRadius, d1 / 2, d2 / 2);
+      const bx = cur.x - r * v1x / d1, by = cur.y - r * v1y / d1;
+      const ax = cur.x + r * v2x / d2, ay = cur.y + r * v2y / d2;
+      d += ` L ${bx.toFixed(2)} ${by.toFixed(2)} Q ${cur.x.toFixed(2)} ${cur.y.toFixed(2)} ${ax.toFixed(2)} ${ay.toFixed(2)}`;
+    }
+    d += ` L ${pts[pts.length-1].x.toFixed(1)} ${pts[pts.length-1].y.toFixed(1)}`;
+    return { d, segments: segs };
+  }
+
+  // Random attempts exhausted: try every pair of grid directions and pick the
+  // first one that yields a non-negative 2-segment solution. This guarantees a
+  // grid-aligned L-shape rather than a diagonal straight line.
+  for (let i = 0; i < directions.length; i++) {
+    for (let j = 0; j < directions.length; j++) {
+      if (i === j) continue;
+      const ba = directions[i], bb = directions[j];
+      const det = ba[0] * bb[1] - ba[1] * bb[0];
+      if (Math.abs(det) < 1e-6) continue;
+      const la = (dx * bb[1] - dy * bb[0]) / det;
+      const lb = (dy * ba[0] - dx * ba[1]) / det;
+      if (!isFinite(la) || !isFinite(lb)) continue;
+      if (la < minS - 1e-6 || lb < minS - 1e-6) continue;
+      const mx = x1 + la * ba[0], my = y1 + la * ba[1];
+      const pts = [{ x: x1, y: y1 }, { x: mx, y: my }, { x: x2, y: y2 }];
+      const segs = [
+        { x1, y1, x2: mx, y2: my },
+        { x1: mx, y1: my, x2: x2, y2: y2 }
+      ];
+      let dStr = `M ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+      if (cornerRadius > 0) {
+        const v1x = mx - x1, v1y = my - y1;
+        const v2x = x2 - mx, v2y = y2 - my;
+        const d1 = Math.sqrt(v1x * v1x + v1y * v1y);
+        const d2 = Math.sqrt(v2x * v2x + v2y * v2y);
+        const cosA = (v1x * v2x + v1y * v2y) / (d1 * d2);
+        if (cosA > -0.999) {
+          const r = Math.min(cornerRadius, d1 / 2, d2 / 2);
+          const bx = mx - r * v1x / d1, by = my - r * v1y / d1;
+          const ax = mx + r * v2x / d2, ay = my + r * v2y / d2;
+          dStr += ` L ${bx.toFixed(2)} ${by.toFixed(2)} Q ${mx.toFixed(2)} ${my.toFixed(2)} ${ax.toFixed(2)} ${ay.toFixed(2)}`;
+        }
+      }
+      dStr += ` L ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+      return { d: dStr, segments: segs };
+    }
+  }
+
+  return null;
+}
+
+// ─── MAIN GENERATE ─────────────────────────────────────────────────────────
+function generate() {
+  readParams();
+  const P = params;
+  const svg = document.getElementById('main');
+  svg.setAttribute('width', P.cw);
+  svg.setAttribute('height', P.ch);
+  svg.setAttribute('viewBox', `0 0 ${P.cw} ${P.ch}`);
+  svg.innerHTML = '';
+
+  svg.appendChild(svgEl('rect', { x: 0, y: 0, width: P.cw, height: P.ch, fill: P.bg }));
+
+  // Build grid
+  let grid;
+  if (P.gridType === 'square') grid = buildSquareGrid(P.cw, P.ch, P.gs);
+  else if (P.gridType === 'triangle') grid = buildTriangleGrid(P.cw, P.ch, P.gs);
+  else grid = buildHexGrid(P.cw, P.ch, P.gs);
+
+  const { intersections, segments } = grid;
+
+  // Grid lines
+  const gLines = svgEl('g', { stroke: P.fg, 'stroke-width': P.glw, 'stroke-linecap': 'round' });
+  for (const s of segments) {
+    gLines.appendChild(svgEl('line', { x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2 }));
+  }
+  svg.appendChild(gLines);
+
+  // Intersection dots
+  const gInts = svgEl('g', { fill: P.fg });
+  for (const pt of intersections) {
+    if (pt.x < -P.gs || pt.y < -P.gs || pt.x > P.cw + P.gs || pt.y > P.ch + P.gs) continue;
+    gInts.appendChild(svgEl('circle', { cx: pt.x, cy: pt.y, r: P.gir }));
+  }
+  svg.appendChild(gInts);
+
+  // Place dots with spacing
+  const dots = placeDots(segments, intersections, P);
+
+  // Select ring dots
+  const maxR = dots.length ? Math.max(...dots.map(d => d.r)) : 1;
+  const minR = dots.length ? Math.min(...dots.map(d => d.r)) : 0;
+  const rangeR = maxR - minR || 1;
+  const ringDots = dots.filter(d => {
+    const ns = (d.r - minR) / rangeR;
+    return Math.random() < P.rdens * (P.rsw * ns + (1 - P.rsw));
+  });
+
+  // Rings (drawn below dots)
+  const gRings = svgEl('g', { fill: 'none', stroke: P.fg, 'stroke-width': P.glw });
+  for (const d of ringDots) {
+    const mult = rnd(P.rrmin, P.rrmax);
+    gRings.appendChild(svgEl('circle', { cx: d.x, cy: d.y, r: (d.r * mult).toFixed(2) }));
+  }
+  svg.appendChild(gRings);
+
+  // Dots
+  const gDots = svgEl('g', { fill: P.fg });
+  for (const d of dots) {
+    gDots.appendChild(svgEl('circle', { cx: d.x, cy: d.y, r: d.r.toFixed(2) }));
+  }
+  svg.appendChild(gDots);
+
+  // Paths — connect pairs of dots
+  const gPaths = svgEl('g', {
+    fill: 'none', stroke: P.fg,
+    'stroke-width': P.plw,
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round'
+  });
+
+  const usedPairs = new Set();
+  const drawnPaths = []; // { segments: [...] } for crossing checks
+  const minStraight = P.pminstr * P.gs;
+  const gridDirs = getGridDirections(P.gridType);
+  const useGridPath = !!gridDirs;
+
+  let drawn = 0, att = 0;
+  const maxAttempts = P.pcount * 80;
+  while (drawn < P.pcount && att < maxAttempts && dots.length >= 2) {
+    att++;
+    const ai = Math.floor(Math.random() * dots.length);
+    let bi = Math.floor(Math.random() * dots.length);
+    if (ai === bi) continue;
+    const pk = [ai, bi].sort().join('-');
+    if (usedPairs.has(pk)) continue;
+
+    const a = dots[ai], b = dots[bi];
+
+    const maxT = P.pmaxturns;
+    const u = Math.random();
+    const exp = 1 / (0.1 + P.pcbias * 2);
+    const numTurns = Math.max(1, Math.round(1 + Math.pow(u, exp) * (maxT - 1)));
+
+    const result = useGridPath
+      ? buildGridPath(a.x, a.y, b.x, b.y, numTurns, gridDirs, P.pcr, minStraight)
+      : buildOrthogonalPath(a.x, a.y, b.x, b.y, numTurns, P.pcr, minStraight);
+
+    if (!result || !result.segments || result.segments.length === 0) continue;
+    if (result.segments.some(s => !isFinite(s.x1) || !isFinite(s.y1) || !isFinite(s.x2) || !isFinite(s.y2))) continue;
+
+    // Crossing rule: 0 = forbidden, 1 = unrestricted (skip check with probability P.pcross)
+    if (Math.random() >= P.pcross && pathCrossesExisting(result.segments, drawnPaths, a, b)) {
+      continue;
+    }
+
+    usedPairs.add(pk);
+    gPaths.appendChild(svgEl('path', { d: result.d }));
+    drawnPaths.push({ segments: result.segments });
+    drawn++;
+  }
+  svg.appendChild(gPaths);
+
+  // Scale SVG to fit container
+  const container = document.getElementById('canvas-container');
+  const scale = Math.min((container.clientWidth - 32) / P.cw, (container.clientHeight - 32) / P.ch, 1);
+  svg.style.transform = `scale(${scale})`;
+  svg.style.transformOrigin = 'center center';
+}
+
+document.getElementById('btn-regen').addEventListener('click', generate);
+document.getElementById('btn-export').addEventListener('click', () => {
+  const svg = document.getElementById('main');
+  const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'pcb-pattern.svg'; a.click();
+});
+
+generate();
+</script>
+</body>
+</html>
