@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{ partial "head.html" . }}
+</head>
+<body class="min-h-screen flex flex-col">
+  {{ partial "header.html" . }}
+  <main class="flex-1 flex items-center justify-center">
+    <div class="text-center px-4 animate-fade-in">
+      <h1 class="font-mono text-[10rem] sm:text-[12rem] font-bold text-neon leading-none animate-glow select-none">404</h1>
+      <p class="font-mono text-neon-dim text-lg sm:text-xl mt-4">Not all those who wander are lost.</p>
+      <p class="text-gray-400 mt-8 text-base">
+        You, however, are. <a href="/" class="text-neon hover:text-neon-glow transition-colors underline underline-offset-4">Go back to safety</a>
+      </p>
+    </div>
+  </main>
+  {{ partial "footer.html" . }}
+  {{ $js := resources.Get "js/main.js" | js.Build | minify | fingerprint }}
+  <script src="{{ $js.RelPermalink }}" defer></script>
+</body>
+</html>
