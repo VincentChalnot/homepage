@@ -6,7 +6,7 @@
 
 > The source code is publicly visible but **not** open source. You may not copy, reuse, or redistribute any part of this repository — including content, design, and personal data.
 
-Single-page bilingual homepage built with [Hugo](https://gohugo.io) and [Tailwind CSS](https://tailwindcss.com), deployed at **[vincent-chalnot.pages.dev](https://vincent-chalnot.pages.dev)**.
+Single-page bilingual homepage built with [Hugo](https://gohugo.io) and [Tailwind CSS](https://tailwindcss.com), deployed at **[vincent.chalnot.fr](https://vincent.chalnot.fr)**.
 
 ## Overview
 

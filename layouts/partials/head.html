@@ -9,3 +9,4 @@
 {{ $style := $sass | css.Sass (dict "outputStyle" "compressed") | css.PostCSS (dict "config" "postcss.config.js") | minify | fingerprint }}
 <link rel="stylesheet" href="{{ $style.RelPermalink }}" integrity="{{ $style.Data.Integrity }}">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="shortcut icon" href="/favicon.ico">

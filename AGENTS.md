@@ -2,7 +2,7 @@
 
 ## Project
 
-Personal homepage — Hugo static single-page site with bilingual support (English/French). Deployed at vincent-chalnot.pages.dev. Repository at github.com/VincentChalnot/homepage.
+Personal homepage — Hugo static single-page site with bilingual support (English/French). Deployed at vincent.chalnot.fr. Repository at github.com/VincentChalnot/homepage.
 
 ## Build & Dev
 

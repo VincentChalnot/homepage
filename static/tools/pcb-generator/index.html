@@ -639,7 +639,6 @@ function buildGridPath(x1, y1, x2, y2, numTurns, directions, cornerRadius, minSt
       if (!isFinite(la) || !isFinite(lb)) continue;
       if (la < minS - 1e-6 || lb < minS - 1e-6) continue;
       const mx = x1 + la * ba[0], my = y1 + la * ba[1];
-      const pts = [{ x: x1, y: y1 }, { x: mx, y: my }, { x: x2, y: y2 }];
       const segs = [
         { x1, y1, x2: mx, y2: my },
         { x1: mx, y1: my, x2: x2, y2: y2 }
@@ -786,6 +785,9 @@ function generate() {
 }
 
 document.getElementById('btn-regen').addEventListener('click', generate);
+document.getElementById('sidebar').addEventListener('input', () => generate());
+document.getElementById('sidebar').addEventListener('change', () => generate());
+
 document.getElementById('btn-export').addEventListener('click', () => {
   const svg = document.getElementById('main');
   const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
