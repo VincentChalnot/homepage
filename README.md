@@ -1,4 +1,4 @@
-# Vinvent Chalnot — Personal Homepage
+# Vincent Chalnot — Personal Homepage
 
 [![Hugo](https://img.shields.io/badge/Hugo-0.140%2B-FF4088?logo=hugo)](https://gohugo.io)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
